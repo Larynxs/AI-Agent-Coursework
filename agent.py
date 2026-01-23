@@ -397,7 +397,7 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
         styles.add(ParagraphStyle('Title2', fontSize=14, textColor=DARK_BLUE, fontName='Helvetica-Bold', spaceBefore=12, spaceAfter=6))
         styles.add(ParagraphStyle('Title3', fontSize=11, textColor=BLUE, fontName='Helvetica-Bold', spaceBefore=10, spaceAfter=4))
         styles.add(ParagraphStyle('Body', fontSize=9, textColor=GRAY, leading=12, spaceAfter=6))
-        styles.add(ParagraphStyle('Bullet', fontSize=9, textColor=GRAY, leading=11, leftIndent=15, spaceAfter=3))
+        styles.add(ParagraphStyle('BulletItem', fontSize=9, textColor=GRAY, leading=11, leftIndent=15, spaceAfter=3))
         styles.add(ParagraphStyle('Small', fontSize=7, textColor=colors.HexColor('#718096')))
         styles.add(ParagraphStyle('Footer', fontSize=7, textColor=colors.HexColor('#a0aec0'), alignment=1))
         
@@ -744,7 +744,7 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
             for line in self.report_sections['RISKS'].split('\n'):
                 line = line.strip()
                 if line.startswith('-'):
-                    story.append(Paragraph(f"• {line[1:].strip()}", styles['Bullet']))
+                    story.append(Paragraph(f"• {line[1:].strip()}", styles['BulletItem']))
                 elif line:
                     story.append(Paragraph(line, styles['Body']))
         
@@ -753,7 +753,7 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
             for line in self.report_sections['CATALYSTS'].split('\n'):
                 line = line.strip()
                 if line.startswith('-'):
-                    story.append(Paragraph(f"• {line[1:].strip()}", styles['Bullet']))
+                    story.append(Paragraph(f"• {line[1:].strip()}", styles['BulletItem']))
                 elif line:
                     story.append(Paragraph(line, styles['Body']))
         
