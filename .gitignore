@@ -1,4 +1,6 @@
 config.py
+
+Reports
 # Virtual Environment 
 venv/
 env/

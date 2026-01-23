@@ -375,6 +375,28 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
     
     # ==================== PDF REPORT ====================
     
+    def _get_indicator(self, value, good_th, bad_th):
+        """Return indicator symbol based on thresholds (higher is better)."""
+        if pd.isna(value) or value is None:
+            return "—"
+        if value >= good_th:
+            return "●"  # Good - filled circle
+        elif value >= bad_th:
+            return "◑"  # Moderate - half circle (using different char)
+        else:
+            return "○"  # Poor - empty circle
+    
+    def _get_indicator_inv(self, value, good_th, bad_th):
+        """Return indicator symbol based on thresholds (lower is better)."""
+        if pd.isna(value) or value is None:
+            return "—"
+        if value <= good_th:
+            return "●"  # Good
+        elif value <= bad_th:
+            return "◑"  # Moderate
+        else:
+            return "○"  # Poor
+    
     def _save_pdf(self, path):
         """Generate institutional-grade PDF report."""
         
@@ -422,19 +444,41 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
         story.append(hdr)
         story.append(Spacer(1, 0.15*inch))
         
-        # Title block
-        story.append(Paragraph(self.ticker, styles['Title1']))
-        story.append(Paragraph(f"<font color='#4a5568'>{self.company_name}</font>", styles['Normal']))
-        story.append(Paragraph(f"<font size=8 color='#718096'>{self.sector} | {self.industry}</font>", styles['Normal']))
+        # Title block with price info
+        title_data = [
+            [self.ticker, '', f"${self.current_price:,.2f}", 'CURRENT PRICE'],
+            [self.company_name, '', f"${self.market_cap/1e9:,.1f}B", 'MARKET CAP'],
+            [f"{self.sector} | {self.industry}", '', f"${self.target_price:,.2f}", 'TARGET PRICE'],
+        ]
+        title_tbl = Table(title_data, colWidths=[4*inch, 0.3*inch, 1.5*inch, 1*inch])
+        title_tbl.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (0,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (0,0), 24),
+            ('TEXTCOLOR', (0,0), (0,0), DARK_BLUE),
+            ('FONTSIZE', (0,1), (0,1), 12),
+            ('TEXTCOLOR', (0,1), (0,1), GRAY),
+            ('FONTSIZE', (0,2), (0,2), 9),
+            ('TEXTCOLOR', (0,2), (0,2), colors.HexColor('#718096')),
+            ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (2,0), (2,-1), 14),
+            ('TEXTCOLOR', (2,0), (2,0), BLUE),
+            ('TEXTCOLOR', (2,1), (2,1), GRAY),
+            ('TEXTCOLOR', (2,2), (2,2), rec_color),
+            ('FONTSIZE', (3,0), (3,-1), 7),
+            ('TEXTCOLOR', (3,0), (3,-1), colors.HexColor('#a0aec0')),
+            ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(title_tbl)
         story.append(Spacer(1, 0.15*inch))
         
         # Main recommendation banner
         rec_data = [
             [self.recommendation],
-            ['CONFIDENCE', 'TARGET', 'RETURN', 'RISK'],
-            [f"{self.confidence:.0f}%", f"${self.target_price:,.2f}", f"{self.upside:+.1f}%", self.risk_rating]
+            ['CONFIDENCE', 'TARGET', 'RETURN', 'RISK/REWARD', 'RISK RATING'],
+            [f"{self.confidence:.0f}%", f"${self.target_price:,.2f}", f"{self.upside:+.1f}%", f"{abs(self.upside/5):.1f}x", self.risk_rating]
         ]
-        rec_tbl = Table(rec_data, colWidths=[7.5*inch/4]*4)
+        rec_tbl = Table(rec_data, colWidths=[7.5*inch/5]*5)
         rec_tbl.setStyle(TableStyle([
             ('SPAN', (0,0), (-1,0)),
             ('BACKGROUND', (0,0), (-1,0), rec_color),
@@ -445,7 +489,7 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
             ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#e2e8f0')),
             ('FONTSIZE', (0,1), (-1,1), 7),
             ('FONTNAME', (0,2), (-1,2), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,2), (-1,2), 12),
+            ('FONTSIZE', (0,2), (-1,2), 11),
             ('TOPPADDING', (0,0), (-1,-1), 8),
             ('BOTTOMPADDING', (0,0), (-1,-1), 8),
             ('BOX', (0,0), (-1,-1), 1, DARK_BLUE),
@@ -453,19 +497,44 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
         story.append(rec_tbl)
         story.append(Spacer(1, 0.12*inch))
         
-        # Score boxes row
+        # Market Profile Section
+        story.append(Paragraph("MARKET PROFILE", styles['Title3']))
+        market_data = [
+            ['Current Price', f"${self.current_price:,.2f}", 'Market Cap', f"${self.market_cap/1e9:,.1f}B", 'Sector', self.sector],
+            ['52W Range', f"${self.current_price*0.75:,.0f} - ${self.current_price*1.25:,.0f}", 'Enterprise Value', f"${(self.market_cap + self.ratios['leverage'].get('total_debt', 0) if pd.notna(self.ratios['leverage'].get('total_debt', 0)) else self.market_cap)/1e9:,.1f}B", 'Industry', self.industry[:20]],
+        ]
+        mkt_tbl = Table(market_data, colWidths=[1*inch, 1.3*inch, 1*inch, 1*inch, 0.8*inch, 1.4*inch])
+        mkt_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (0,-1), LIGHT),
+            ('BACKGROUND', (2,0), (2,-1), LIGHT),
+            ('BACKGROUND', (4,0), (4,-1), LIGHT),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e0')),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('FONTNAME', (1,0), (1,-1), 'Helvetica-Bold'),
+            ('FONTNAME', (3,0), (3,-1), 'Helvetica-Bold'),
+            ('ALIGN', (1,0), (1,-1), 'CENTER'),
+            ('ALIGN', (3,0), (3,-1), 'CENTER'),
+        ]))
+        story.append(mkt_tbl)
+        story.append(Spacer(1, 0.1*inch))
+        
+        # Overall Score Section
+        story.append(Paragraph("OVERALL SCORE", styles['Title3']))
+        pe_val = self.ratios['valuation'].get('pe_ratio', 0) if self.ratios.get('valuation') else 0
         score_data = [[
-            f"OVERALL SCORE\n{self.risk_score}/100",
+            f"FINANCIAL HEALTH\n{self.risk_score}/100",
             f"Profitability\n{self._fmt(self.ratios['profitability'].get('net_margin'))}%",
+            f"Returns\n{self._fmt(self.ratios['profitability'].get('roe'))}%",
             f"Leverage\n{self._fmt(self.ratios['leverage'].get('debt_to_equity'))}x",
             f"Liquidity\n{self._fmt(self.ratios['liquidity'].get('current_ratio'))}x",
             f"Growth\n{self._fmt(self.ratios['growth'].get('revenue_growth'))}%",
-            f"Z-Score\n{self._fmt(self.ratios['risk'].get('altman_z_score'))}"
+            f"P/E Ratio\n{self._fmt(pe_val)}x"
         ]]
-        score_tbl = Table(score_data, colWidths=[1.25*inch]*6)
+        score_tbl = Table(score_data, colWidths=[1.1*inch]*7)
         score_tbl.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (0,0), BLUE),
             ('TEXTCOLOR', (0,0), (0,0), colors.white),
+            ('FONTNAME', (0,0), (0,0), 'Helvetica-Bold'),
             ('BACKGROUND', (1,0), (-1,0), LIGHT),
             ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e0')),
             ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e0')),
@@ -475,7 +544,7 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
             ('BOTTOMPADDING', (0,0), (-1,-1), 6),
         ]))
         story.append(score_tbl)
-        story.append(Spacer(1, 0.15*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         # Investment Thesis Section
         story.append(Paragraph("INVESTMENT THESIS", styles['Title3']))
@@ -484,34 +553,63 @@ Be specific with ALL numbers. Professional institutional tone. No generic statem
         
         story.append(Spacer(1, 0.1*inch))
         
-        # Key metrics table
+        # Key metrics table - Enhanced with indicators
         story.append(Paragraph("KEY FINANCIAL METRICS", styles['Title3']))
         metrics = [
-            ['PROFITABILITY', '', '', 'LEVERAGE & RISK', '', ''],
-            ['Gross Margin', f"{self._fmt(self.ratios['profitability'].get('gross_margin'))}%", '',
-             'Debt/Equity', f"{self._fmt(self.ratios['leverage'].get('debt_to_equity'))}x", ''],
-            ['Operating Margin', f"{self._fmt(self.ratios['profitability'].get('operating_margin'))}%", '',
-             'Interest Coverage', f"{self._fmt(self.ratios['leverage'].get('interest_coverage'))}x", ''],
-            ['Net Margin', f"{self._fmt(self.ratios['profitability'].get('net_margin'))}%", '',
-             'CF to Debt', f"{self._fmt(self.ratios['leverage'].get('cash_flow_to_debt'))}", ''],
-            ['ROE', f"{self._fmt(self.ratios['profitability'].get('roe'))}%", '',
-             'Current Ratio', f"{self._fmt(self.ratios['liquidity'].get('current_ratio'))}x", ''],
-            ['ROCE', f"{self._fmt(self.ratios['profitability'].get('roce'))}%", '',
-             'Altman Z-Score', f"{self._fmt(self.ratios['risk'].get('altman_z_score'))}", ''],
+            ['PROFITABILITY', '', '', 'LEVERAGE & SOLVENCY', '', ''],
+            ['Gross Margin', f"{self._fmt(self.ratios['profitability'].get('gross_margin'))}%", self._get_indicator(self.ratios['profitability'].get('gross_margin'), 40, 20),
+             'Debt/Equity', f"{self._fmt(self.ratios['leverage'].get('debt_to_equity'))}x", self._get_indicator_inv(self.ratios['leverage'].get('debt_to_equity'), 0.5, 1.5)],
+            ['Operating Margin', f"{self._fmt(self.ratios['profitability'].get('operating_margin'))}%", self._get_indicator(self.ratios['profitability'].get('operating_margin'), 20, 10),
+             'Interest Coverage', f"{self._fmt(self.ratios['leverage'].get('interest_coverage'))}x", self._get_indicator(self.ratios['leverage'].get('interest_coverage'), 5, 2)],
+            ['Net Margin', f"{self._fmt(self.ratios['profitability'].get('net_margin'))}%", self._get_indicator(self.ratios['profitability'].get('net_margin'), 15, 5),
+             'CF to Debt', f"{self._fmt(self.ratios['leverage'].get('cash_flow_to_debt'))}", self._get_indicator(self.ratios['leverage'].get('cash_flow_to_debt'), 0.5, 0.2)],
+            ['ROE', f"{self._fmt(self.ratios['profitability'].get('roe'))}%", self._get_indicator(self.ratios['profitability'].get('roe'), 15, 10),
+             'Net Debt/EBITDA', f"{self._fmt(self.ratios['leverage'].get('net_debt_to_ebitda'))}x", self._get_indicator_inv(self.ratios['leverage'].get('net_debt_to_ebitda'), 2, 4)],
+            ['ROA', f"{self._fmt(self.ratios['profitability'].get('roa'))}%", self._get_indicator(self.ratios['profitability'].get('roa'), 10, 5),
+             'Altman Z-Score', f"{self._fmt(self.ratios['risk'].get('altman_z_score'))}", self._get_indicator(self.ratios['risk'].get('altman_z_score'), 3, 1.81)],
+            ['ROCE', f"{self._fmt(self.ratios['profitability'].get('roce'))}%", self._get_indicator(self.ratios['profitability'].get('roce'), 15, 8),
+             'Risk Score', f"{self.risk_score}/100", self._get_indicator(self.risk_score, 70, 40)],
+            ['LIQUIDITY', '', '', 'GROWTH & EFFICIENCY', '', ''],
+            ['Current Ratio', f"{self._fmt(self.ratios['liquidity'].get('current_ratio'))}x", self._get_indicator(self.ratios['liquidity'].get('current_ratio'), 1.5, 1),
+             'Revenue Growth', f"{self._fmt(self.ratios['growth'].get('revenue_growth'))}%", self._get_indicator(self.ratios['growth'].get('revenue_growth'), 10, 0)],
+            ['Quick Ratio', f"{self._fmt(self.ratios['liquidity'].get('quick_ratio'))}x", self._get_indicator(self.ratios['liquidity'].get('quick_ratio'), 1, 0.5),
+             'NI Growth', f"{self._fmt(self.ratios['growth'].get('net_income_growth'))}%", self._get_indicator(self.ratios['growth'].get('net_income_growth'), 10, 0)],
+            ['Cash Ratio', f"{self._fmt(self.ratios['liquidity'].get('cash_ratio'))}x", self._get_indicator(self.ratios['liquidity'].get('cash_ratio'), 0.5, 0.2),
+             'Asset Turnover', f"{self._fmt(self.ratios['efficiency'].get('asset_turnover'))}x", self._get_indicator(self.ratios['efficiency'].get('asset_turnover'), 1, 0.5)],
+            ['VALUATION', '', '', '', '', ''],
+            ['P/E Ratio', f"{self._fmt(self.ratios['valuation'].get('pe_ratio'))}x", self._get_indicator_inv(self.ratios['valuation'].get('pe_ratio'), 15, 30),
+             'P/B Ratio', f"{self._fmt(self.ratios['valuation'].get('pb_ratio'))}x", self._get_indicator_inv(self.ratios['valuation'].get('pb_ratio'), 3, 10)],
+            ['P/S Ratio', f"{self._fmt(self.ratios['valuation'].get('ps_ratio'))}x", self._get_indicator_inv(self.ratios['valuation'].get('ps_ratio'), 3, 8),
+             'EV/EBITDA', f"{self._fmt(self.ratios['valuation'].get('ev_ebitda'))}x", self._get_indicator_inv(self.ratios['valuation'].get('ev_ebitda'), 10, 20)],
         ]
-        m_tbl = Table(metrics, colWidths=[1.2*inch, 0.8*inch, 0.3*inch, 1.2*inch, 0.8*inch, 0.3*inch])
+        m_tbl = Table(metrics, colWidths=[1.1*inch, 0.7*inch, 0.3*inch, 1.1*inch, 0.7*inch, 0.3*inch])
         m_tbl.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (2,0), BLUE),
             ('BACKGROUND', (3,0), (5,0), colors.HexColor('#744210')),
+            ('BACKGROUND', (0,7), (2,7), colors.HexColor('#276749')),
+            ('BACKGROUND', (3,7), (5,7), colors.HexColor('#9b2c2c')),
+            ('BACKGROUND', (0,11), (5,11), colors.HexColor('#553c9a')),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('TEXTCOLOR', (0,7), (-1,7), colors.white),
+            ('TEXTCOLOR', (0,11), (-1,11), colors.white),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTNAME', (0,7), (-1,7), 'Helvetica-Bold'),
+            ('FONTNAME', (0,11), (-1,11), 'Helvetica-Bold'),
             ('SPAN', (0,0), (2,0)), ('SPAN', (3,0), (5,0)),
-            ('BACKGROUND', (0,1), (0,-1), LIGHT),
-            ('BACKGROUND', (3,1), (3,-1), LIGHT),
+            ('SPAN', (0,7), (2,7)), ('SPAN', (3,7), (5,7)),
+            ('SPAN', (0,11), (5,11)),
+            ('BACKGROUND', (0,1), (0,6), LIGHT),
+            ('BACKGROUND', (3,1), (3,6), LIGHT),
+            ('BACKGROUND', (0,8), (0,10), LIGHT),
+            ('BACKGROUND', (3,8), (3,10), LIGHT),
+            ('BACKGROUND', (0,12), (0,13), LIGHT),
+            ('BACKGROUND', (3,12), (3,13), LIGHT),
             ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e0')),
             ('FONTSIZE', (0,0), (-1,-1), 8),
-            ('ALIGN', (1,0), (1,-1), 'CENTER'),
-            ('ALIGN', (4,0), (4,-1), 'CENTER'),
+            ('ALIGN', (1,0), (2,-1), 'CENTER'),
+            ('ALIGN', (4,0), (5,-1), 'CENTER'),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
         ]))
         story.append(m_tbl)
         
