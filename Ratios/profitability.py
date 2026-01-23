@@ -1,15 +1,6 @@
 """
 Profitability Ratios Module
-===========================
-Calculates profitability metrics to assess how effectively
-a company generates profits from its operations.
-
-Ratios Included:
-    - Gross Margin
-    - Operating Margin
-    - Net Margin
-    - Return on Equity (ROE)
-    - Return on Assets (ROA)
+Calculates: Gross Margin, Operating Margin, Net Margin, ROE, ROA, ROCE, EBITDA Margin
 """
 
 import pandas as pd
@@ -17,319 +8,218 @@ import numpy as np
 
 
 class ProfitabilityAnalysis:
-    """
-    Analyses company profitability using key financial ratios.
-    
-    Profitability ratios measure how well a company converts
-    revenue into profits at various stages of operations.
-    
-    Attributes:
-        income_stmt (DataFrame): Income statement data
-        balance_sheet (DataFrame): Balance sheet data
-        ratios (dict): Calculated profitability ratios
-    
-    Example:
-        >>> profitability = ProfitabilityAnalysis(income_stmt, balance_sheet)
-        >>> results = profitability.calculate_all()
-        >>> profitability.print_summary()
-    """
+    """Analyses company profitability using key financial ratios."""
     
     def __init__(self, income_stmt: pd.DataFrame, balance_sheet: pd.DataFrame):
-        """
-        Initialise with financial statement data.
-        
-        Args:
-            income_stmt: Income statement DataFrame with years as columns
-            balance_sheet: Balance sheet DataFrame with years as columns
-        """
         self.income_stmt = income_stmt
         self.balance_sheet = balance_sheet
         self.ratios = {}
     
-    # =========================================================================
-    # Individual Ratio Calculations
-    # =========================================================================
-    
     def get_gross_margin(self) -> pd.Series:
-        """
-        Calculate Gross Profit Margin.
-        
-        Formula: (Gross Profit / Total Revenue) × 100
-        
-        Interpretation:
-            - Measures production efficiency
-            - Higher is better (more profit per sale)
-            - Industry-dependent benchmark
-        
-        Returns:
-            Series of gross margin percentages by year
-        """
+        """(Gross Profit / Total Revenue) × 100"""
         try:
-            revenue = self.income_stmt.loc['Total Revenue']
-            gross_profit = self.income_stmt.loc['Gross Profit']
-            
-            gross_margin = (gross_profit / revenue) * 100
-            self.ratios['gross_margin'] = gross_margin
-            return gross_margin
-            
+            result = (self.income_stmt.loc['Gross Profit'] / self.income_stmt.loc['Total Revenue']) * 100
+            self.ratios['gross_margin'] = result
+            return result
         except KeyError as e:
-            print(f"  Error: Missing data field for gross margin - {e}")
+            print(f"  Error calculating gross margin: {e}")
             return None
     
     def get_operating_margin(self) -> pd.Series:
-        """
-        Calculate Operating Profit Margin.
-        
-        Formula: (Operating Income / Total Revenue) × 100
-        
-        Interpretation:
-            - Measures operational efficiency
-            - Shows profit after operating expenses
-            - Excludes interest and taxes
-        
-        Returns:
-            Series of operating margin percentages by year
-        """
+        """(Operating Income / Total Revenue) × 100"""
         try:
-            revenue = self.income_stmt.loc['Total Revenue']
-            operating_income = self.income_stmt.loc['Operating Income']
-            
-            operating_margin = (operating_income / revenue) * 100
-            self.ratios['operating_margin'] = operating_margin
-            return operating_margin
-            
+            result = (self.income_stmt.loc['Operating Income'] / self.income_stmt.loc['Total Revenue']) * 100
+            self.ratios['operating_margin'] = result
+            return result
         except KeyError as e:
-            print(f"  Error: Missing data field for operating margin - {e}")
+            print(f"  Error calculating operating margin: {e}")
             return None
     
     def get_net_margin(self) -> pd.Series:
-        """
-        Calculate Net Profit Margin.
-        
-        Formula: (Net Income / Total Revenue) × 100
-        
-        Interpretation:
-            - Measures overall profitability
-            - Shows profit after ALL expenses
-            - Key metric for investors
-        
-        Returns:
-            Series of net margin percentages by year
-        """
+        """(Net Income / Total Revenue) × 100"""
         try:
-            revenue = self.income_stmt.loc['Total Revenue']
-            net_income = self.income_stmt.loc['Net Income']
-            
-            net_margin = (net_income / revenue) * 100
-            self.ratios['net_margin'] = net_margin
-            return net_margin
-            
+            result = (self.income_stmt.loc['Net Income'] / self.income_stmt.loc['Total Revenue']) * 100
+            self.ratios['net_margin'] = result
+            return result
         except KeyError as e:
-            print(f"  Error: Missing data field for net margin - {e}")
+            print(f"  Error calculating net margin: {e}")
+            return None
+    
+    def get_ebitda_margin(self) -> pd.Series:
+        """(EBITDA / Total Revenue) × 100 - Measures cash profitability"""
+        try:
+            result = (self.income_stmt.loc['EBITDA'] / self.income_stmt.loc['Total Revenue']) * 100
+            self.ratios['ebitda_margin'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating EBITDA margin: {e}")
             return None
     
     def get_roe(self) -> pd.Series:
-        """
-        Calculate Return on Equity (ROE).
-        
-        Formula: (Net Income / Stockholders Equity) × 100
-        
-        Interpretation:
-            - Measures return generated for shareholders
-            - Higher ROE indicates efficient use of equity
-            - Benchmark: >15% is generally good
-        
-        Returns:
-            Series of ROE percentages by year
-        """
+        """(Net Income / Stockholders Equity) × 100"""
         try:
-            net_income = self.income_stmt.loc['Net Income']
-            equity = self.balance_sheet.loc['Stockholders Equity']
-            
-            roe = (net_income / equity) * 100
-            self.ratios['roe'] = roe
-            return roe
-            
+            result = (self.income_stmt.loc['Net Income'] / self.balance_sheet.loc['Stockholders Equity']) * 100
+            self.ratios['roe'] = result
+            return result
         except KeyError as e:
-            print(f"  Error: Missing data field for ROE - {e}")
+            print(f"  Error calculating ROE: {e}")
             return None
     
     def get_roa(self) -> pd.Series:
-        """
-        Calculate Return on Assets (ROA).
-        
-        Formula: (Net Income / Total Assets) × 100
-        
-        Interpretation:
-            - Measures efficiency of asset utilisation
-            - Shows profit generated per dollar of assets
-            - Benchmark: >5% is generally acceptable
-        
-        Returns:
-            Series of ROA percentages by year
-        """
+        """(Net Income / Total Assets) × 100"""
         try:
-            net_income = self.income_stmt.loc['Net Income']
-            total_assets = self.balance_sheet.loc['Total Assets']
-            
-            roa = (net_income / total_assets) * 100
-            self.ratios['roa'] = roa
-            return roa
-            
+            result = (self.income_stmt.loc['Net Income'] / self.balance_sheet.loc['Total Assets']) * 100
+            self.ratios['roa'] = result
+            return result
         except KeyError as e:
-            print(f"  Error: Missing data field for ROA - {e}")
+            print(f"  Error calculating ROA: {e}")
             return None
     
-    # =========================================================================
-    # Aggregate Functions
-    # =========================================================================
+    def get_roce(self) -> pd.Series:
+        """
+        Return on Capital Employed (ROCE)
+        Formula: (EBIT / Capital Employed) × 100
+        Capital Employed = Total Assets - Current Liabilities
+        Measures efficiency of capital usage
+        """
+        try:
+            ebit = self.income_stmt.loc['EBIT']
+            total_assets = self.balance_sheet.loc['Total Assets']
+            current_liabilities = self.balance_sheet.loc['Current Liabilities']
+            
+            capital_employed = total_assets - current_liabilities
+            result = (ebit / capital_employed) * 100
+            self.ratios['roce'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating ROCE: {e}")
+            return None
+    
+    def get_roic(self) -> pd.Series:
+        """
+        Return on Invested Capital (ROIC)
+        Formula: (EBIT × (1 - Tax Rate)) / Invested Capital
+        Invested Capital = Total Debt + Stockholders Equity - Cash
+        """
+        try:
+            ebit = self.income_stmt.loc['EBIT']
+            
+            # Calculate effective tax rate
+            tax = self.income_stmt.loc['Tax Provision']
+            pretax = self.income_stmt.loc['Pretax Income']
+            tax_rate = tax / pretax
+            
+            # NOPAT (Net Operating Profit After Tax)
+            nopat = ebit * (1 - tax_rate)
+            
+            # Invested Capital
+            total_debt = self.balance_sheet.loc['Total Debt']
+            equity = self.balance_sheet.loc['Stockholders Equity']
+            cash = self.balance_sheet.loc['Cash And Cash Equivalents']
+            invested_capital = total_debt + equity - cash
+            
+            result = (nopat / invested_capital) * 100
+            self.ratios['roic'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating ROIC: {e}")
+            return None
     
     def calculate_all(self) -> dict:
-        """
-        Calculate all profitability ratios.
-        
-        Returns:
-            Dictionary containing all profitability metrics
-        """
+        """Calculate all profitability ratios."""
         print("Calculating profitability ratios...")
         
         self.get_gross_margin()
         self.get_operating_margin()
         self.get_net_margin()
+        self.get_ebitda_margin()
         self.get_roe()
         self.get_roa()
+        self.get_roce()
+        self.get_roic()
         
         print(f"  Completed: {len(self.ratios)} ratios calculated")
         return self.ratios
     
     def get_latest_values(self) -> dict:
-        """
-        Get the most recent year's values for all ratios.
-        
-        Returns:
-            Dictionary with ratio names and latest values
-        """
+        """Get most recent year's values."""
         latest = {}
         for name, series in self.ratios.items():
             if series is not None and len(series) > 0:
-                latest[name] = series.iloc[0]  # First column is most recent
+                latest[name] = series.iloc[0]
         return latest
     
     def print_summary(self):
-        """Print a formatted summary of profitability ratios."""
+        """Print formatted summary."""
         if not self.ratios:
             print("No ratios calculated. Run calculate_all() first.")
             return
         
-        print("\n" + "=" * 55)
+        print("\n" + "=" * 67)
         print("PROFITABILITY ANALYSIS")
-        print("=" * 55)
+        print("=" * 67)
         
-        # Get years from first available ratio
-        years = None
-        for ratio in self.ratios.values():
-            if ratio is not None:
-                years = ratio.index.tolist()
-                break
-        
-        if years is None:
+        # Get years
+        first_ratio = next((v for v in self.ratios.values() if v is not None), None)
+        if first_ratio is None:
             print("No data available")
             return
         
-        # Print header
-        header = f"{'Metric':<25}"
-        for year in years[:4]:  # Show up to 4 years
-            # Extract just the year part
-            year_str = str(year)[:4] if len(str(year)) >= 4 else str(year)
-            header += f"{year_str:>12}"
-        print(header)
-        print("-" * 55)
+        years = first_ratio.index.tolist()
         
-        # Print each ratio
-        ratio_display_names = {
+        header = f"{'Metric':<25}"
+        for year in years[:5]:
+            header += f"{str(year)[:4]:>12}"
+        print(header)
+        print("-" * 67)
+        
+        display_names = {
             'gross_margin': 'Gross Margin (%)',
             'operating_margin': 'Operating Margin (%)',
+            'ebitda_margin': 'EBITDA Margin (%)',
             'net_margin': 'Net Margin (%)',
             'roe': 'Return on Equity (%)',
-            'roa': 'Return on Assets (%)'
+            'roa': 'Return on Assets (%)',
+            'roce': 'ROCE (%)',
+            'roic': 'ROIC (%)'
         }
         
-        for key, display_name in ratio_display_names.items():
+        for key, name in display_names.items():
             if key in self.ratios and self.ratios[key] is not None:
-                row = f"{display_name:<25}"
-                for i, year in enumerate(years[:4]):
-                    value = self.ratios[key].iloc[i]
-                    row += f"{value:>12.2f}"
+                row = f"{name:<25}"
+                for i in range(min(5, len(years))):
+                    val = self.ratios[key].iloc[i]
+                    row += f"{val:>12.2f}" if pd.notna(val) else f"{'N/A':>12}"
                 print(row)
-            else:
-                print(f"{display_name:<25}{'N/A':>12}")
         
-        print("-" * 55)
+        print("-" * 67)
     
     def to_dataframe(self) -> pd.DataFrame:
-        """
-        Convert all ratios to a single DataFrame.
-        
-        Returns:
-            DataFrame with ratios as rows and years as columns
-        """
-        if not self.ratios:
-            return pd.DataFrame()
-        
-        # Filter out None values and create DataFrame
-        valid_ratios = {k: v for k, v in self.ratios.items() if v is not None}
-        return pd.DataFrame(valid_ratios).T
+        """Convert ratios to DataFrame."""
+        valid = {k: v for k, v in self.ratios.items() if v is not None}
+        return pd.DataFrame(valid).T
 
 
 # =============================================================================
-# Standalone Functions (for direct use without class)
-# =============================================================================
-
-def calculate_gross_margin(income_stmt: pd.DataFrame) -> pd.Series:
-    """Calculate Gross Margin from income statement."""
-    revenue = income_stmt.loc['Total Revenue']
-    gross_profit = income_stmt.loc['Gross Profit']
-    return (gross_profit / revenue) * 100
-
-
-def calculate_operating_margin(income_stmt: pd.DataFrame) -> pd.Series:
-    """Calculate Operating Margin from income statement."""
-    revenue = income_stmt.loc['Total Revenue']
-    operating_income = income_stmt.loc['Operating Income']
-    return (operating_income / revenue) * 100
-
-
-def calculate_net_margin(income_stmt: pd.DataFrame) -> pd.Series:
-    """Calculate Net Margin from income statement."""
-    revenue = income_stmt.loc['Total Revenue']
-    net_income = income_stmt.loc['Net Income']
-    return (net_income / revenue) * 100
-
-
-def calculate_roe(income_stmt: pd.DataFrame, balance_sheet: pd.DataFrame) -> pd.Series:
-    """Calculate Return on Equity."""
-    net_income = income_stmt.loc['Net Income']
-    equity = balance_sheet.loc['Stockholders Equity']
-    return (net_income / equity) * 100
-
-
-def calculate_roa(income_stmt: pd.DataFrame, balance_sheet: pd.DataFrame) -> pd.Series:
-    """Calculate Return on Assets."""
-    net_income = income_stmt.loc['Net Income']
-    total_assets = balance_sheet.loc['Total Assets']
-    return (net_income / total_assets) * 100
-
-
-# =============================================================================
-# Main - Test the module
+# Test
 # =============================================================================
 
 if __name__ == "__main__":
-    # Test with sample data
-    print("Profitability Analysis Module")
-    print("Run this with actual financial data to see results.")
-    print("\nExample usage:")
-    print("  from ratios.profitability import ProfitabilityAnalysis")
-    print("  analysis = ProfitabilityAnalysis(income_stmt, balance_sheet)")
-    print("  results = analysis.calculate_all()")
-    print("  analysis.print_summary()")
+    import os
+    
+    paths = ["../APPL_Data/", "APPL_Data/", ""]
+    data_dir = next((p for p in paths if os.path.exists(f"{p}AAPL_income_statement.csv")), None)
+    
+    if data_dir is not None:
+        print("Testing Profitability Analysis...\n")
+        
+        income_stmt = pd.read_csv(f"{data_dir}AAPL_income_statement.csv", index_col=0)
+        balance_sheet = pd.read_csv(f"{data_dir}AAPL_balance_sheet.csv", index_col=0)
+        
+        analysis = ProfitabilityAnalysis(income_stmt, balance_sheet)
+        analysis.calculate_all()
+        analysis.print_summary()
+        
+        print("\n✅ Test passed!")
+    else:
+        print("No test data found. Place AAPL CSVs in APPL_Data/ folder.")

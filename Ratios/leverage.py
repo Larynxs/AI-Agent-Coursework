@@ -1,6 +1,7 @@
 """
 Leverage Ratios Module
-Calculates: Debt-to-Equity, Debt-to-Assets, Equity Multiplier, Interest Coverage, Cash Flow to Debt
+Calculates: Debt-to-Equity, Debt-to-Assets, Equity Multiplier, Interest Coverage,
+            Cash Flow to Debt, Net Debt/EBITDA, Debt Service Coverage, Long-term Debt Ratio
 """
 
 import pandas as pd
@@ -47,9 +48,12 @@ class LeverageAnalysis:
             return None
     
     def get_interest_coverage(self) -> pd.Series:
-        """EBIT / Interest Expense"""
+        """EBIT / Interest Expense - Ability to pay interest"""
         try:
-            result = self.income_stmt.loc['EBIT'] / abs(self.income_stmt.loc['Interest Expense'])
+            interest = abs(self.income_stmt.loc['Interest Expense'])
+            # Avoid division by zero
+            interest = interest.replace(0, np.nan)
+            result = self.income_stmt.loc['EBIT'] / interest
             self.ratios['interest_coverage'] = result
             return result
         except KeyError as e:
@@ -68,6 +72,78 @@ class LeverageAnalysis:
             print(f"  Error calculating cash flow to debt: {e}")
             return None
     
+    def get_net_debt_to_ebitda(self) -> pd.Series:
+        """
+        (Total Debt - Cash) / EBITDA
+        Key metric for credit analysis - measures years to repay debt
+        < 2x is healthy, > 4x is concerning
+        """
+        try:
+            total_debt = self.balance_sheet.loc['Total Debt']
+            cash = self.balance_sheet.loc['Cash And Cash Equivalents']
+            ebitda = self.income_stmt.loc['EBITDA']
+            
+            net_debt = total_debt - cash
+            # Avoid division by zero
+            ebitda = ebitda.replace(0, np.nan)
+            result = net_debt / ebitda
+            self.ratios['net_debt_to_ebitda'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating Net Debt/EBITDA: {e}")
+            return None
+    
+    def get_debt_service_coverage(self) -> pd.Series:
+        """
+        Operating Cash Flow / (Interest + Principal Payments)
+        Measures ability to service all debt obligations
+        > 1.25x is generally acceptable
+        """
+        if self.cash_flow is None:
+            return None
+        try:
+            ocf = self.cash_flow.loc['Operating Cash Flow']
+            interest = abs(self.income_stmt.loc['Interest Expense'])
+            
+            # Use current debt as proxy for principal payments
+            current_debt = self.balance_sheet.loc['Current Debt']
+            
+            debt_service = interest + current_debt
+            # Avoid division by zero
+            debt_service = debt_service.replace(0, np.nan)
+            result = ocf / debt_service
+            self.ratios['debt_service_coverage'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating debt service coverage: {e}")
+            return None
+    
+    def get_long_term_debt_ratio(self) -> pd.Series:
+        """
+        Long Term Debt / Total Assets
+        Measures long-term financial leverage
+        """
+        try:
+            result = self.balance_sheet.loc['Long Term Debt'] / self.balance_sheet.loc['Total Assets']
+            self.ratios['long_term_debt_ratio'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating long-term debt ratio: {e}")
+            return None
+    
+    def get_financial_leverage(self) -> pd.Series:
+        """
+        Total Liabilities / Stockholders Equity
+        Broader measure than debt-to-equity (includes all liabilities)
+        """
+        try:
+            result = self.balance_sheet.loc['Total Liabilities Net Minority Interest'] / self.balance_sheet.loc['Stockholders Equity']
+            self.ratios['financial_leverage'] = result
+            return result
+        except KeyError as e:
+            print(f"  Error calculating financial leverage: {e}")
+            return None
+    
     def calculate_all(self) -> dict:
         """Calculate all leverage ratios."""
         self.get_debt_to_equity()
@@ -75,6 +151,10 @@ class LeverageAnalysis:
         self.get_equity_multiplier()
         self.get_interest_coverage()
         self.get_cash_flow_to_debt()
+        self.get_net_debt_to_ebitda()
+        self.get_debt_service_coverage()
+        self.get_long_term_debt_ratio()
+        self.get_financial_leverage()
         return self.ratios
     
     def get_latest_values(self) -> dict:
@@ -91,22 +171,30 @@ class LeverageAnalysis:
         print("LEVERAGE ANALYSIS")
         print("=" * 67)
         
-        years = list(self.ratios.values())[0].index.tolist()
+        # Get years from first available ratio
+        first_ratio = next((v for v in self.ratios.values() if v is not None), None)
+        if first_ratio is None:
+            print("No data available")
+            return
         
-        # Header
+        years = first_ratio.index.tolist()
+        
         header = f"{'Metric':<25}"
         for year in years[:5]:
             header += f"{str(year)[:4]:>12}"
         print(header)
         print("-" * 67)
         
-        # Data rows
         display_names = {
             'debt_to_equity': 'Debt-to-Equity',
             'debt_to_assets': 'Debt-to-Assets',
             'equity_multiplier': 'Equity Multiplier',
+            'financial_leverage': 'Financial Leverage',
+            'long_term_debt_ratio': 'LT Debt Ratio',
             'interest_coverage': 'Interest Coverage',
-            'cash_flow_to_debt': 'Cash Flow to Debt'
+            'debt_service_coverage': 'Debt Service Cover',
+            'cash_flow_to_debt': 'Cash Flow to Debt',
+            'net_debt_to_ebitda': 'Net Debt/EBITDA'
         }
         
         for key, name in display_names.items():

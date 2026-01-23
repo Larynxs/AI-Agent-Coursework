@@ -323,7 +323,7 @@ if __name__ == "__main__":
         results = analysis.calculate_all()
         analysis.print_summary()
         
-        print("\n✅ Liquidity module test passed!")
+        print("\n Liquidity module test passed!")
     else:
         print("Liquidity Analysis Module")
         print("=" * 40)
