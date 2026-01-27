@@ -30,3 +30,7 @@ outputs/*.png
 
 # OS
 .DS_Store
+SONY_Data/SONY_balance_sheet.csv
+SONY_Data/SONY_cash_flow.csv
+.gitignore
+SONY_Data/SONY_income_statement.csv

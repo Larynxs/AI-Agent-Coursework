@@ -31,15 +31,15 @@ import matplotlib.pyplot as plt
 
 # Import components
 from config import ALPHA_VANTAGE_KEY, OPENAI_KEY
-from datacollector import DataCollector
-from Ratios.profitability import ProfitabilityAnalysis
-from Ratios.liquidity import LiquidityAnalysis
-from Ratios.leverage import LeverageAnalysis
-from Ratios.efficiency import EfficiencyAnalysis
-from Ratios.growth import GrowthAnalysis
-from Ratios.risk import RiskAnalysis
-from Ratios.valuation import ValuationAnalysis
-from forecast import FinancialForecast
+from src.datacollector import DataCollector
+from src.Ratios.profitability import ProfitabilityAnalysis
+from src.Ratios.liquidity import LiquidityAnalysis
+from src.Ratios.leverage import LeverageAnalysis
+from src.Ratios.efficiency import EfficiencyAnalysis
+from src.Ratios.growth import GrowthAnalysis
+from src.Ratios.risk import RiskAnalysis
+from src.Ratios.valuation import ValuationAnalysis
+from src.forecast import FinancialForecast
 
 
 class FundamentalAgent:
