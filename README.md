@@ -680,11 +680,6 @@ This project is developed for educational purposes as part of the MSc Banking an
 
 ## Author
 Abdulbadie Omar A Lary
-MSc Banking and Financial Technology
-UCL School of Management
-IFTE0001: Introduction to Financial Markets
-Track A: Fundamental Analyst Agent
-
 ---
 
 ## Disclaimer
